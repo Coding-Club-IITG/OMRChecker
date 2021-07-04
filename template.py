@@ -9,8 +9,8 @@ import cv2
 import os
 import json
 import numpy as np
-from globals import *
-from utils import *
+import config
+import utils
 
 ### Coordinates Part ###
 
@@ -55,6 +55,14 @@ qtype_data = {
     },
     'QTYPE_INT': {
         'vals': range(10),
+        'orient': 'V'
+    },
+    'QTYPE_INT_11': {
+        'vals': range(11),
+        'orient': 'V'
+    },
+    'QTYPE_INT4': {
+        'vals': [1,2,3,0],
         'orient': 'V'
     },
     'QTYPE_MCQ4': {
@@ -104,7 +112,7 @@ class Template():
             markerOps = self.options["Marker"]
             self.marker_path = os.path.join(
                 os.path.dirname(path), markerOps.get(
-                    "RelativePath", MARKER_FILE))
+                    "RelativePath", config.MARKER_FILE))
             if(not os.path.exists(self.marker_path)):
                 print(
                     "Error: Marker not found at path provided in template:",
@@ -113,7 +121,7 @@ class Template():
 
             marker = cv2.imread(self.marker_path, cv2.IMREAD_GRAYSCALE)
             if("SheetToMarkerWidthRatio" in markerOps):
-                marker = resize_util(marker, uniform_width /
+                marker = utils.resize_util(marker, config.uniform_width /
                                      int(markerOps["SheetToMarkerWidthRatio"]))
             marker = cv2.GaussianBlur(marker, (5, 5), 0)
             marker = cv2.normalize(
@@ -126,20 +134,11 @@ class Template():
             self.marker = marker - \
                 cv2.erode(marker, kernel=np.ones((5, 5)), iterations=5)
 
-        # Allow template to override globals
-        # TODO: This is a hack as there should no be any global configuration
-        # All template configuration should be local. Global config should
-        # be via command args.
-        self.globals = json_obj.get("Globals")
-        self.update_globals()
 
         # Add QBlocks
         for name, block in json_obj["QBlocks"].items():
             self.addQBlocks(name, block)
 
-    def update_globals(self):
-        if self.globals:
-            globals().update(self.globals)
 
     # Expects bubbleDims to be set already
     def addQBlocks(self, key, rect):
